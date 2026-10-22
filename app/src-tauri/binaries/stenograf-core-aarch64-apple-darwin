@@ -1,0 +1,24 @@
+#!/bin/bash
+# Sidecar: в .app берёт PyInstaller --onedir из Resources, в dev ищет корень репозитория.
+set -euo pipefail
+
+HERE="$(cd "$(dirname "$0")" && pwd)"
+BUNDLED="$HERE/../Resources/sidecar/stenograf-core"
+
+if [[ -x "$BUNDLED" ]]; then
+  export STENOGRAF_MODELS="${STENOGRAF_MODELS:-$HOME/Library/Application Support/stenograf/models}"
+  exec "$BUNDLED"
+fi
+
+dir="$HERE"
+for _ in 1 2 3 4 5 6 7 8; do
+  if [[ -f "$dir/core/pyproject.toml" ]]; then
+    export STENOGRAF_MODELS="${STENOGRAF_MODELS:-$dir/models}"
+    cd "$dir/core"
+    exec uv run python -m stenograf_core
+  fi
+  dir="$(dirname "$dir")"
+done
+
+echo "stenograf: не найден core/pyproject.toml от $HERE" >&2
+exit 1

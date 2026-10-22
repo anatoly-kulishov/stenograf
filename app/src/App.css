@@ -1,0 +1,94 @@
+:root {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #1c1917;
+  background: #f6f4f1;
+}
+
+body {
+  margin: 0;
+}
+
+.root {
+  padding: 1.5rem 1.75rem 2rem;
+}
+
+.bar {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 650;
+}
+
+.hint {
+  margin: 0.35rem 0 0;
+  max-width: 36rem;
+  color: #57534e;
+  font-size: 0.9rem;
+}
+
+.rec {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.55rem 0.95rem;
+  background: #1c1917;
+  color: #fafaf9;
+  font: inherit;
+  cursor: pointer;
+}
+
+.rec:disabled {
+  opacity: 0.5;
+  cursor: progress;
+}
+
+.dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: #a8a29e;
+}
+
+.rec.on .dot {
+  background: #dc2626;
+}
+
+.live {
+  margin: 1rem 0 0;
+  color: #9a3412;
+}
+
+.err {
+  margin: 1rem 0 0;
+  color: #b91c1c;
+}
+
+.turns {
+  list-style: none;
+  margin: 1.25rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.turns li {
+  display: grid;
+  grid-template-columns: 3.2rem 6.5rem 1fr;
+  gap: 0.75rem;
+  padding: 0.7rem 0;
+  border-top: 1px solid #e7e5e4;
+}
+
+time {
+  color: #78716c;
+  font-variant-numeric: tabular-nums;
+}
