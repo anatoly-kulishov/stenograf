@@ -4,16 +4,39 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 BUNDLED="$HERE/../Resources/sidecar/stenograf-core"
+SUPPORT_MODELS="$HOME/Library/Application Support/stenograf/models"
+
+resolve_models() {
+  if [[ -n "${STENOGRAF_MODELS:-}" && -f "$STENOGRAF_MODELS/silero_vad.onnx" ]]; then
+    echo "$STENOGRAF_MODELS"
+    return
+  fi
+  if [[ -f "$SUPPORT_MODELS/silero_vad.onnx" ]]; then
+    echo "$SUPPORT_MODELS"
+    return
+  fi
+  local dir="$HERE"
+  local _
+  for _ in 1 2 3 4 5 6 7 8; do
+    if [[ -f "$dir/models/silero_vad.onnx" ]]; then
+      echo "$dir/models"
+      return
+    fi
+    dir="$(dirname "$dir")"
+  done
+  echo "$SUPPORT_MODELS"
+}
+
+MODELS="$(resolve_models)"
+export STENOGRAF_MODELS="$MODELS"
 
 if [[ -x "$BUNDLED" ]]; then
-  export STENOGRAF_MODELS="${STENOGRAF_MODELS:-$HOME/Library/Application Support/stenograf/models}"
   exec "$BUNDLED"
 fi
 
 dir="$HERE"
 for _ in 1 2 3 4 5 6 7 8; do
   if [[ -f "$dir/core/pyproject.toml" ]]; then
-    export STENOGRAF_MODELS="${STENOGRAF_MODELS:-$dir/models}"
     cd "$dir/core"
     exec uv run python -m stenograf_core
   fi

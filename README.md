@@ -5,8 +5,9 @@
 Запись → распознавание речи → кто сказал что → протокол. Всё на своём компьютере, без облака и без бота в Zoom.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+[![Version](https://img.shields.io/badge/version-0.0.1-blue.svg)](https://github.com/anatoly-kulishov/stenograf/releases/tag/v0.0.1)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
-[![Status: PoC](https://img.shields.io/badge/status-PoC-orange.svg)](#roadmap)
+[![macOS 14.4+](https://img.shields.io/badge/macOS-14.4+-black.svg)](#быстрый-старт)
 
 > Альтернатива [Google AI Edge Foresight](https://vc.ru/id553757/3189473-google-ai-edge-foresight-lokalnyy-transkribator), [Meetily](https://meetily.ai/) и Granola: **русский ASR из коробки**, диаризация в открытом коде, интерфейс и промпты на русском.
 
@@ -27,14 +28,15 @@ Granola закрывает сценарий, но уносит аудио в о�
 
 **Stenograf** - privacy-first пайплайн под русские встречи с бизнесом: договорённости, размытые формулировки («как обычно», «побыстрее»), follow-up со ссылками на таймкоды.
 
-## Что умеет сейчас
+## Что умеет сейчас (v0.0.1)
 
-- Десктоп на macOS: Tauri + запись микрофона и системного звука двумя дорожками
+- Десктоп на macOS: Tauri + запись микрофона и системного звука **двумя дорожками**
 - **Локальный ASR** на [GigaAM v3](https://github.com/salute-developers/GigaAM) (MIT) через [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx)
-- **Диаризация** собеседников (pyannote segmentation + NeMo TitaNet). Микрофон помечается как «Я» без диаризации
+- **Диаризация** собеседников (pyannote segmentation + NeMo TitaNet). Микрофон = «Я» без диаризации
 - **VAD-фразы** → спикер по пересечению с диаризацией (как WhisperX: границы диаризации не режут слова)
 - **Пунктуация** из коробки (GigaAM punct)
-- Любой аудиоформат через `ffmpeg` (m4a, mp3, wav, …)
+- Индикатор записи в окне и в трее
+- CLI для готовых файлов (`m4a`, `mp3`, `wav`, … через `ffmpeg`)
 - Сравнение с Whisper large-v3-turbo (`--ref`)
 
 ## Результаты на тестовом диалоге
@@ -56,55 +58,48 @@ Whisper на том же файле **молча пропустил** репли
 
 ### Требования
 
-- macOS 14.4+ (Windows после MVP)
+- macOS 14.4+ (Core Audio process taps; Windows после MVP)
 - Python 3.12, [uv](https://github.com/astral-sh/uv), [ffmpeg](https://ffmpeg.org/)
-- Для приложения: Node.js, pnpm, Rust
-- ~500 МБ на модели (GigaAM + диаризация + VAD), они не входят в бандл
+- Node.js, [pnpm](https://pnpm.io/), Rust
+- ~500 МБ на модели (не входят в бандл приложения)
 
-### Установка
+### Установка и запуск
 
 ```bash
 git clone https://github.com/anatoly-kulishov/stenograf.git
 cd stenograf
 
-./scripts/download_models.sh
-cd core && uv sync
+pnpm setup    # модели + uv sync + pnpm install + ссылка в Application Support
+pnpm dev      # приложение
 ```
 
-### Приложение
+Первый запуск спросит доступ к микрофону и к системному звуку. Скажите собеседникам, что ведёте заметки. «Стоп» отдаёт две дорожки в Python-сайдкар и показывает реплики «Я» / «Спикер N».
 
-```bash
-cd app
-pnpm install
-pnpm tauri dev
-```
+Пока в колонках тишина, системная дорожка может быть пустой: Core Audio tap не шлёт буферы, если выводить нечего.
 
-Первый запуск спросит доступ к микрофону и к системному звуку. Индикатор записи есть в окне и в трее. «Стоп» отдаёт две дорожки в Python-сайдкар и показывает реплики.
+| Команда | Что делает |
+|---|---|
+| `pnpm setup` | модели, ядро, зависимости, symlink моделей для `.app` |
+| `pnpm dev` | Tauri в dev |
+| `pnpm cli -- файл.m4a` | CLI транскрипции |
+| `pnpm models` | только модели |
+| `pnpm sidecar` | PyInstaller `--onedir` (~70 МБ без моделей) |
+| `pnpm build` | сайдкар + `.app` |
 
-Пока в колонках тишина, системная дорожка может быть пустой: Core Audio tap не шлёт буферы, если выводить нечего. На созвоне звук собеседников есть, и дорожка заполняется.
+Те же шаги: `scripts/*.sh`.
 
-Сборка сайдкара и `.app`:
-
-```bash
-./scripts/build_sidecar.sh   # PyInstaller --onedir, ~70 МБ без моделей (в .app ~100 МБ: копия разворачивает симлинки)
-cd app && pnpm tauri build
-```
+**Модели.** В репо: `./models`. Для собранного `.app` нужен тот же набор в  
+`~/Library/Application Support/stenograf/models` - `pnpm setup` делает symlink. Без этого сайдкар упадёт на `silero_vad.onnx`.
 
 ### CLI
 
 ```bash
+pnpm cli -- путь/к/встрече.m4a
+pnpm cli -- --mic mic.wav --system system.wav
+
 cd core
-
-# одна дорожка, диаризация спикеров
-uv run python -m stenograf_core.cli путь/к/встрече.m4a
-
-# две дорожки: микрофон = «Я», система = собеседники
-uv run python -m stenograf_core.cli --mic mic.wav --system system.wav
-
-# синтетический диалог + WER vs Whisper (нужен brew install whisper-cpp)
 uv run python make_test_audio.py
 uv run python -m stenograf_core.cli audio/dialog.wav --ref audio/dialog.ref.json
-
 uv run pytest
 ```
 
@@ -119,12 +114,23 @@ uv run pytest
 ...
 ```
 
+### Сборка `.app`
+
+```bash
+pnpm build
+# → app/src-tauri/target/release/bundle/macos/Stenograf.app
+```
+
+Сборка без подписи Apple Developer ID: Gatekeeper может ругаться. Модели по-прежнему снаружи бандла.
+
+Релизы: [GitHub Releases](https://github.com/anatoly-kulishov/stenograf/releases).
+
 ## Как устроено
 
 ```
 React  →  Tauri (Rust)
             ├─ cpal: микрофон → mic.wav 16 кГц = «Я»
-            └─ Core Audio tap: системный звук → system.wav 16 кГц
+            └─ Core Audio tap (cidre): системный звук → system.wav 16 кГц
                  │
                  ▼
           Python-сайдкар, JSON lines stdin/stdout
@@ -134,18 +140,19 @@ React  →  Tauri (Rust)
 
 Почему VAD, а не куски от диаризации: границы кластеров часто режут слово пополам («оценку» → «Плоценку»). Фразы режет VAD, спикер вешается поверх.
 
-Подробный план спринтов: [docs/ROADMAP.md](docs/ROADMAP.md).
+План спринтов: [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Roadmap
 
 - [x] Offline ASR + диаризация на русском
 - [x] Сравнение с Whisper
-- [x] macOS: две дорожки, Tauri, сайдкар
+- [x] macOS: две дорожки, Tauri, сайдкар (v0.0.1)
 - [ ] Hotwords / словарь терминов (Excel, КТРУ, ОКПД)
 - [ ] Прогон на реальных созвонах
 - [ ] Саммари: договорённости, риски, вопросы заказчику (llama.cpp)
 - [ ] Экспорт Markdown / Obsidian + MCP
 - [ ] Windows (WASAPI loopback)
+- [ ] Подпись и нотаризация `.app`
 
 ## Стек
 
@@ -156,6 +163,7 @@ React  →  Tauri (Rust)
 | VAD | Silero VAD | MIT |
 | Segmentation | pyannote 3.0 (ONNX) | MIT |
 | Embeddings | NeMo TitaNet small | Apache-2.0 / CC-BY |
+| Desktop | Tauri 2 + React | MIT / Apache-2.0 |
 
 ## Почему не просто Whisper / Meetily
 

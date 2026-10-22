@@ -1,12 +1,14 @@
 .venv/
-/models/
-/audio/
+/models
+/audio
 __pycache__/
 core/.venv/
 core/dist/
 core/build/
 *.spec
-app/node_modules/
+node_modules/
 app/dist/
 app/src-tauri/target/
 app/src-tauri/gen/
+.idea/
+.DS_Store
