@@ -1,0 +1,12 @@
+[project]
+name = "stenograf"
+description = "Локальный транскрибатор встреч для русского языка (GigaAM + диаризация)"
+version = "0.1.0"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "jiwer>=4.0.0",
+    "numpy>=2.5.4",
+    "sherpa-onnx>=1.13.8",
+    "sherpa-onnx-core==1.13.8",
+    "soundfile>=0.14.0",
+]
