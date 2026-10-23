@@ -29,12 +29,14 @@ Windows (WASAPI loopback, Bluetooth 8 kHz -> 16 kHz) - после MVP.
 
 ## Спринт 2. Качество на реальных записях
 
-Сначала набор из 3-5 реальных созвонов и метрики (WER, DER, пропуски реплик). Без этого следующие шаги не калибруются.
+Сначала набор из 3-5 реальных созвонов и метрики (WER, пропуски реплик, число спикеров). Без этого калибровка не закрыта.
 
-1. ASR остаётся GigaAM v3 RNNT punct через sherpa-onnx. Это и есть end-to-end вариант с пунктуацией. Hotwords только с `decoding_method="modified_beam_search"`.
-2. Диаризация остаётся в sherpa-onnx (pyannote segmentation 3.0 + NeMo TitaNet). `pyannote/speaker-diarization-community-1` на Hugging Face gated (нужен токен) и тянет torch. Годится только как эталон на машине разработчика, не в дистрибутиве.
-3. Выравнивание: VAD-фразы, спикер по пересечению с сегментами диаризации (уже в ядре). Пословные таймкоды - только если фраза цепляет двух спикеров.
-4. Словарь терминов (Excel, КТРУ, ОКПД) через hotwords.
+1. [x] Харнесс `eval/meetings/` + `pnpm eval` (WER, спикеры, пропуски). Формат: [eval/README.md](../eval/README.md).
+2. [x] ASR GigaAM v3 RNNT punct. Hotwords через `modified_beam_search` + `modeling_unit=cjkchar` (латиница в словаре - через пробелы: `e x c e l`).
+3. [x] Диаризация sherpa-onnx (pyannote seg 3.0 + TitaNet). community-1 - только эталон разработчика.
+4. [x] Выравнивание VAD + overlap (без пословных таймкодов, пока фразы не цепляют двух спикеров на реале).
+5. [x] Словарь `core/stenograf_core/data/hotwords.txt` (КТРУ, ОКПД, Excel, …).
+6. [ ] Наполнить 3-5 **реальных** созвонов с `ref.json` и зафиксировать baseline метрик.
 
 ## Спринт 3. Локальная аналитика
 

@@ -5,7 +5,7 @@
 Запись → распознавание речи → кто сказал что → протокол. Всё на своём компьютере, без облака и без бота в Zoom.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
-[![Version](https://img.shields.io/badge/version-0.0.1-blue.svg)](https://github.com/anatoly-kulishov/stenograf/releases/tag/v0.0.1)
+[![Version](https://img.shields.io/badge/version-0.0.2-blue.svg)](https://github.com/anatoly-kulishov/stenograf/releases/tag/v0.0.2)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![macOS 14.4+](https://img.shields.io/badge/macOS-14.4+-black.svg)](#быстрый-старт)
 
@@ -28,13 +28,15 @@ Granola закрывает сценарий, но уносит аудио в о�
 
 **Stenograf** - privacy-first пайплайн под русские встречи с бизнесом: договорённости, размытые формулировки («как обычно», «побыстрее»), follow-up со ссылками на таймкоды.
 
-## Что умеет сейчас (v0.0.1)
+## Что умеет сейчас (v0.0.2)
 
 - Десктоп на macOS: Tauri + запись микрофона и системного звука **двумя дорожками**
 - **Локальный ASR** на [GigaAM v3](https://github.com/salute-developers/GigaAM) (MIT) через [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx)
+- **Hotwords** (КТРУ, ОКПД, Excel, …) через `modified_beam_search`
 - **Диаризация** собеседников (pyannote segmentation + NeMo TitaNet). Микрофон = «Я» без диаризации
 - **VAD-фразы** → спикер по пересечению с диаризацией (как WhisperX: границы диаризации не режут слова)
 - **Пунктуация** из коробки (GigaAM punct)
+- **Eval-харнесс** `pnpm eval` (WER, спикеры, пропуски реплик)
 - Индикатор записи в окне и в трее
 - CLI для готовых файлов (`m4a`, `mp3`, `wav`, … через `ffmpeg`)
 - Сравнение с Whisper large-v3-turbo (`--ref`)
@@ -85,8 +87,10 @@ pnpm dev      # приложение
 | `pnpm models` | только модели |
 | `pnpm sidecar` | PyInstaller `--onedir` (~70 МБ без моделей) |
 | `pnpm build` | сайдкар + `.app` |
+| `pnpm eval` | метрики по `eval/meetings/` (Sprint 2) |
+| `pnpm eval:demo` | синтетическая встреча + eval |
 
-Те же шаги: `scripts/*.sh`.
+Те же шаги: `scripts/*.sh`. Словарь терминов: `core/stenograf_core/data/hotwords.txt`.
 
 **Модели.** В репо: `./models`. Для собранного `.app` нужен тот же набор в  
 `~/Library/Application Support/stenograf/models` - `pnpm setup` делает symlink. Без этого сайдкар упадёт на `silero_vad.onnx`.
@@ -96,11 +100,13 @@ pnpm dev      # приложение
 ```bash
 pnpm cli -- путь/к/встрече.m4a
 pnpm cli -- --mic mic.wav --system system.wav
+pnpm cli -- --no-hotwords путь/к/встрече.m4a   # greedy без словаря
 
-cd core
-uv run python make_test_audio.py
-uv run python -m stenograf_core.cli audio/dialog.wav --ref audio/dialog.ref.json
-uv run pytest
+# оценка встреч (положи audio + ref.json в eval/meetings/<id>/)
+pnpm eval:demo
+pnpm eval
+
+cd core && uv run pytest
 ```
 
 Пример вывода:
@@ -147,8 +153,9 @@ React  →  Tauri (Rust)
 - [x] Offline ASR + диаризация на русском
 - [x] Сравнение с Whisper
 - [x] macOS: две дорожки, Tauri, сайдкар (v0.0.1)
-- [ ] Hotwords / словарь терминов (Excel, КТРУ, ОКПД)
-- [ ] Прогон на реальных созвонах
+- [x] Hotwords / словарь терминов (Excel, КТРУ, ОКПД)
+- [x] Харнесс eval (WER, спикеры, пропуски)
+- [ ] Прогон на 3-5 реальных созвонах (baseline)
 - [ ] Саммари: договорённости, риски, вопросы заказчику (llama.cpp)
 - [ ] Экспорт Markdown / Obsidian + MCP
 - [ ] Windows (WASAPI loopback)

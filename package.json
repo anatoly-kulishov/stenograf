@@ -1,6 +1,6 @@
 {
   "name": "stenograf",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "scripts": {
     "setup": "bash scripts/setup.sh",
@@ -8,6 +8,8 @@
     "cli": "bash scripts/cli.sh",
     "models": "bash scripts/download_models.sh",
     "sidecar": "bash scripts/build_sidecar.sh",
-    "build": "bash scripts/build_sidecar.sh && pnpm --dir app tauri build"
+    "build": "bash scripts/build_sidecar.sh && pnpm --dir app tauri build",
+    "eval": "bash scripts/eval.sh",
+    "eval:demo": "bash scripts/make_eval_demo.sh && bash scripts/eval.sh"
   }
 }

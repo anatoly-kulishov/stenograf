@@ -6,6 +6,7 @@ import numpy as np
 import sherpa_onnx
 
 from stenograf_core.audio import SAMPLE_RATE
+from stenograf_core.hotwords import load_terms, normalize_term, write_hotwords_file
 from stenograf_core.paths import models_dir
 
 GIGAAM_FEATURE_DIM = 64
@@ -13,6 +14,8 @@ GIGAAM_FEATURE_DIM = 64
 MAX_CHUNK_SEC = 20
 VAD_WINDOW = 512
 NUM_THREADS = 8
+HOTWORDS_SCORE = 1.5
+MODELING_UNIT = 'cjkchar'
 
 
 def gigaam_dir() -> Path:
@@ -45,18 +48,43 @@ def split_phrases(samples: np.ndarray) -> list[tuple[float, float]]:
     return phrases
 
 
-def transcribe_gigaam(samples: np.ndarray, segments: list[tuple[float, float]]) -> list[str]:
+def _build_recognizer(hotwords_path: Path | None) -> sherpa_onnx.OfflineRecognizer:
     root = gigaam_dir()
-    recognizer = sherpa_onnx.OfflineRecognizer.from_transducer(
-        encoder=str(root / 'encoder.int8.onnx'),
-        decoder=str(root / 'decoder.onnx'),
-        joiner=str(root / 'joiner.onnx'),
-        tokens=str(root / 'tokens.txt'),
-        feature_dim=GIGAAM_FEATURE_DIM,
-        model_type='nemo_transducer',
-        num_threads=NUM_THREADS,
-    )
+    kwargs: dict[str, object] = {
+        'encoder': str(root / 'encoder.int8.onnx'),
+        'decoder': str(root / 'decoder.onnx'),
+        'joiner': str(root / 'joiner.onnx'),
+        'tokens': str(root / 'tokens.txt'),
+        'feature_dim': GIGAAM_FEATURE_DIM,
+        'model_type': 'nemo_transducer',
+        'num_threads': NUM_THREADS,
+        'modeling_unit': MODELING_UNIT,
+    }
+    if hotwords_path is not None:
+        kwargs.update(
+            decoding_method='modified_beam_search',
+            max_active_paths=4,
+            hotwords_file=str(hotwords_path),
+            hotwords_score=HOTWORDS_SCORE,
+        )
+    return sherpa_onnx.OfflineRecognizer.from_transducer(**kwargs)
 
+
+def transcribe_gigaam(
+    samples: np.ndarray,
+    segments: list[tuple[float, float]],
+    hotwords: Path | list[str] | None = None,
+) -> list[str]:
+    """hotwords: путь к словарю, список терминов или None (без beam/hotwords)."""
+    prepared: Path | None = None
+    if isinstance(hotwords, Path):
+        terms = load_terms(hotwords)
+        prepared = write_hotwords_file(terms, models_dir() / '.cache' / 'hotwords.runtime.txt')
+    elif isinstance(hotwords, list):
+        terms = [term for term in (normalize_term(item) for item in hotwords) if term]
+        prepared = write_hotwords_file(terms, models_dir() / '.cache' / 'hotwords.runtime.txt')
+
+    recognizer = _build_recognizer(prepared)
     streams = []
     for start, end in segments:
         stream = recognizer.create_stream()

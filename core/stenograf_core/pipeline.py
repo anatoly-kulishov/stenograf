@@ -7,6 +7,7 @@ from pathlib import Path
 from stenograf_core.asr import split_phrases, transcribe_gigaam
 from stenograf_core.audio import SAMPLE_RATE, load_audio
 from stenograf_core.diarize import assign_speakers, diarize
+from stenograf_core.hotwords import DEFAULT_HOTWORDS
 
 Progress = Callable[[str, int], None]
 
@@ -29,7 +30,21 @@ def _label(cluster: int, labels: dict[int, str]) -> str:
     return labels.setdefault(cluster, f'speaker-{len(labels) + 1}')
 
 
-def transcribe_track(path: Path, speaker: str | None, on_progress: Progress, num_speakers: int) -> list[Turn]:
+def _resolve_hotwords(hotwords: Path | list[str] | bool | None) -> Path | list[str] | None:
+    if hotwords is False or hotwords is None:
+        return None
+    if hotwords is True:
+        return DEFAULT_HOTWORDS if DEFAULT_HOTWORDS.is_file() else None
+    return hotwords
+
+
+def transcribe_track(
+    path: Path,
+    speaker: str | None,
+    on_progress: Progress,
+    num_speakers: int,
+    hotwords: Path | list[str] | None = None,
+) -> list[Turn]:
     """speaker='me' без диаризации. speaker=None - кластера sherpa-onnx."""
     on_progress('load', 10)
     samples = load_audio(path)
@@ -39,7 +54,7 @@ def transcribe_track(path: Path, speaker: str | None, on_progress: Progress, num
     on_progress('vad', 25)
     phrases = split_phrases(samples)
     on_progress('asr', 45)
-    texts = transcribe_gigaam(samples, phrases)
+    texts = transcribe_gigaam(samples, phrases, hotwords=hotwords)
 
     if speaker == 'me':
         speakers = ['me'] * len(phrases)
@@ -72,12 +87,15 @@ def transcribe_meeting(
     system: Path | None,
     on_progress: Progress | None = None,
     num_speakers: int = -1,
+    hotwords: Path | list[str] | bool | None = True,
 ) -> list[Turn]:
+    """hotwords=True - словарь core/data/hotwords.txt; False/None - greedy без словаря."""
     report = on_progress or _noop
+    resolved = _resolve_hotwords(hotwords)
     turns: list[Turn] = []
     if mic is not None:
-        turns.extend(transcribe_track(mic, 'me', report, num_speakers))
+        turns.extend(transcribe_track(mic, 'me', report, num_speakers, resolved))
     if system is not None:
-        turns.extend(transcribe_track(system, None, report, num_speakers))
+        turns.extend(transcribe_track(system, None, report, num_speakers, resolved))
     report('done', 100)
     return merge_turns(turns)

@@ -25,11 +25,24 @@ def handle(request: dict) -> None:
 
     mic = Path(request['mic']) if request.get('mic') else None
     system = Path(request['system']) if request.get('system') else None
+    hotwords: Path | bool
+    if request.get('hotwords') is False:
+        hotwords = False
+    elif isinstance(request.get('hotwords'), str):
+        hotwords = Path(request['hotwords'])
+    else:
+        hotwords = True
 
     def on_progress(stage: str, pct: int) -> None:
         emit({'id': request_id, 'event': 'progress', 'stage': stage, 'pct': pct})
 
-    turns = transcribe_meeting(mic, system, on_progress, num_speakers=int(request.get('speakers', -1)))
+    turns = transcribe_meeting(
+        mic,
+        system,
+        on_progress,
+        num_speakers=int(request.get('speakers', -1)),
+        hotwords=hotwords,
+    )
     emit({'id': request_id, 'event': 'result', 'turns': [turn.to_json() for turn in turns]})
 
 

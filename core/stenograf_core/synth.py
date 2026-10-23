@@ -9,6 +9,8 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+import soundfile as sf
+
 SAMPLE_RATE = 16000
 PAUSE_SEC = 0.7
 PITCH_DOWN = f'asetrate={SAMPLE_RATE}*0.8,aresample={SAMPLE_RATE},atempo=1.25'
@@ -35,6 +37,8 @@ def build_dialog(out: Path) -> Path:
             check=True,
         )
         parts: list[Path] = []
+        ref: list[dict[str, float | str]] = []
+        cursor = 0.0
         for num, (speaker, text) in enumerate(DIALOG):
             aiff = Path(tmp, f'{num:02d}.aiff')
             wav = Path(tmp, f'{num:02d}.wav')
@@ -44,6 +48,9 @@ def build_dialog(out: Path) -> Path:
                 ['ffmpeg', '-y', '-loglevel', 'error', '-i', str(aiff), '-ar', str(SAMPLE_RATE), '-ac', '1', *filters, str(wav)],
                 check=True,
             )
+            duration = len(sf.read(wav)[0]) / SAMPLE_RATE
+            ref.append({'start': cursor, 'end': cursor + duration, 'speaker': speaker, 'text': text})
+            cursor += duration + PAUSE_SEC
             parts += [wav, silence]
 
         concat_list = Path(tmp, 'list.txt')
@@ -53,6 +60,5 @@ def build_dialog(out: Path) -> Path:
             check=True,
         )
 
-    ref = [{'speaker': speaker, 'text': text} for speaker, text in DIALOG]
-    out.with_suffix('.ref.json').write_text(json.dumps(ref, ensure_ascii=False, indent=2))
+    out.with_suffix('.ref.json').write_text(json.dumps(ref, ensure_ascii=False, indent=2), encoding='utf-8')
     return out

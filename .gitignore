@@ -12,3 +12,12 @@ app/src-tauri/target/
 app/src-tauri/gen/
 .idea/
 .DS_Store
+eval/meetings/**/audio.wav
+eval/meetings/**/mic.wav
+eval/meetings/**/system.wav
+eval/meetings/**/hyp.json
+eval/meetings/**/metrics.json
+eval/meetings/**/*.ref.json
+!eval/meetings/**/ref.json
+!eval/meetings/**/meta.json
+!eval/README.md
